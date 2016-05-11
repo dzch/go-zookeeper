@@ -21,6 +21,7 @@ type Lock struct {
 	acl      []ACL
 	lockPath string
 	seq      int
+	data     []byte
 }
 
 // NewLock creates a new lock instance using the provided connection, path, and acl.
@@ -31,6 +32,19 @@ func NewLock(c *Conn, path string, acl []ACL) *Lock {
 		c:    c,
 		path: path,
 		acl:  acl,
+		data: []byte{},
+	}
+}
+
+// NewLock creates a new lock instance using the provided connection, path, data, and acl.
+// The path must be a node that is only used by this lock. A lock instances starts
+// unlocked until Lock() is called.
+func NewLockWithData(c *Conn, path string, data []byte, acl []ACL) *Lock {
+	return &Lock{
+		c:    c,
+		path: path,
+		acl:  acl,
+		data: data,
 	}
 }
 
@@ -52,7 +66,7 @@ func (l *Lock) Lock() error {
 	path := ""
 	var err error
 	for i := 0; i < 3; i++ {
-		path, err = l.c.CreateProtectedEphemeralSequential(prefix, []byte{}, l.acl)
+		path, err = l.c.CreateProtectedEphemeralSequential(prefix, l.data, l.acl)
 		if err == ErrNoNode {
 			// Create parent node.
 			parts := strings.Split(l.path, "/")
